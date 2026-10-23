@@ -1,0 +1,66 @@
+# uv
+# uv.lock is intentionally committed: this is a deployed app, builds must be reproducible.
+.venv/
+.uv/
+
+# Python cache and bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Build and distribution
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Tooling caches and coverage
+.ruff_cache/
+.pytest_cache/
+.mypy_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# Local evidence store (SQLite) and scan output
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+
+# Secrets and environment (keep the example file)
+.env
+.env.*
+!.env.example
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# GCP credentials: never commit service account keys
+*-key.json
+*service-account*.json
+credentials*.json
+application_default_credentials.json
+
+# Cloud SQL Auth Proxy binary
+cloud-sql-proxy
+
+# OS and editors
+.DS_Store
+.idea/
+.vscode/
