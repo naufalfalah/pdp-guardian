@@ -6,9 +6,16 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.161.1",
+    "jinja2>=3.1.6",
     "lokal-id>=0.6.0",
+    "psycopg[binary]>=3.3.6",
+    "pymysql>=1.2.3",
+    "pyyaml>=6.0.3",
     "uvicorn>=0.54.0",
 ]
+
+[project.scripts]
+pdp-guardian = "pdp_guardian.cli:main"
 
 [dependency-groups]
 dev = [
@@ -16,6 +23,23 @@ dev = [
     "ruff>=0.17.2",
 ]
 
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
 [tool.ruff]
 target-version = "py312"
 line-length = 100
+
+[tool.ruff.lint]
+select = [
+    "E", "W",  # pycodestyle
+    "F",       # pyflakes
+    "I",       # import sorting
+    "UP",      # pyupgrade (modern syntax for 3.12)
+    "B",       # bugbear (common bugs)
+    "SIM",     # simplifications
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
