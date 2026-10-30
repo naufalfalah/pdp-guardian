@@ -1,0 +1,11 @@
+# PT Kopi Senja (demo): the DPO's records of processing and retention periods.
+# marketing_leads is deliberately missing, so C3 finds it.
+organization: PT Kopi Senja (demo)
+categories:
+  - id: customer_identity
+    data_types: [NIK, NAME, PHONE, ADDRESS]
+    purpose: "KYC untuk program loyalitas"
+    retention_days: 730
+    locations:
+      - resource: cloudsql://kopi-senja/app/customers
+        timestamp_column: created_at
