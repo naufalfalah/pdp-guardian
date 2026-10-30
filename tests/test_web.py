@@ -220,8 +220,8 @@ def test_unreachable_store_is_503_without_details() -> None:
     assert "secret" not in page.text
 
 
-def test_healthz(store_url: str) -> None:
-    assert client(store_url).get("/healthz").json() == {"status": "ok"}
+def test_health(store_url: str) -> None:
+    assert client(store_url).get("/health").json() == {"status": "ok"}
 
 
 # Content rules on every page

@@ -159,8 +159,8 @@ def create_app(evidence_url: str | None = None, demo: bool | None = None) -> Fas
             entry=change_for(record, diff),
         )
 
-    @app.get("/healthz")
-    def healthz() -> dict[str, str]:
+    @app.get("/health")
+    def health() -> dict[str, str]:
         return {"status": "ok"}
 
     @app.exception_handler(psycopg.Error)
