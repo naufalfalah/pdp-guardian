@@ -1,4 +1,4 @@
-"""Command-line entry point: `pdp-guardian scan` and `pdp-guardian report`.
+"""Command-line entry point: `pdp-guardian scan`, `pdp-guardian report`, `pdp-guardian web`.
 
 Output is Bahasa Indonesia (it is UI copy) and only ever contains counts and
 masked samples, never raw values.
@@ -17,11 +17,13 @@ from pdp_guardian.checks import ARTICLES, C1_PLAINTEXT_RATIO, aggregate
 from pdp_guardian.connectors.sqlurl import SqlUrlConnector
 from pdp_guardian.declaration import DeclarationError, load_declaration
 from pdp_guardian.engine import ScanConfig, run_checks
-from pdp_guardian.evidence import DiffEntry, EvidenceRecord, EvidenceRepository
-from pdp_guardian.narrate import STATUS_LABELS, narrate
-
-DEFAULT_EVIDENCE_URL = "sqlite:///pdp_guardian.db"
-DISCLAIMER = "Temuan untuk ditinjau DPO; bukan pernyataan kesesuaian."
+from pdp_guardian.evidence import (
+    DEFAULT_EVIDENCE_URL,
+    DiffEntry,
+    EvidenceRecord,
+    EvidenceRepository,
+)
+from pdp_guardian.narrate import DISCLAIMER, STATUS_LABELS, narrate
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -60,6 +62,11 @@ def build_parser() -> argparse.ArgumentParser:
     which.add_argument("--scan", metavar="SCAN_ID", help="a specific scan")
     report.add_argument("--evidence-url", **evidence_url)
 
+    web = commands.add_parser("web", help="serve the dashboard (read-only on the evidence store)")
+    web.add_argument("--evidence-url", **evidence_url)
+    web.add_argument("--host", default="127.0.0.1", help="use 0.0.0.0 in a container")
+    web.add_argument("--port", type=int, default=int(os.environ.get("PORT", "8000")))
+
     return parser
 
 
@@ -68,6 +75,8 @@ def main(argv: list[str] | None = None) -> int:
     try:
         if args.command == "scan":
             return _scan(args)
+        if args.command == "web":
+            return _web(args)
         return _report(args)
     except (DeclarationError, ValueError) as exc:
         print(f"pdp-guardian {args.command}: {exc}", file=sys.stderr)
@@ -141,6 +150,15 @@ def _report(args: argparse.Namespace) -> int:
     print()
     _print_diff(diff)
     print(f"\n{DISCLAIMER}")
+    return 0
+
+
+def _web(args: argparse.Namespace) -> int:
+    import uvicorn  # only the dashboard needs the server
+
+    from pdp_guardian.web import create_app
+
+    uvicorn.run(create_app(args.evidence_url), host=args.host, port=args.port)
     return 0
 
 

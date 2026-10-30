@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}PDP Guardian{% endblock %} · PDP Guardian</title>
+  <link rel="stylesheet" href="{{ url_for('static', path='style.css') }}">
+</head>
+<body>
+  {% if demo %}
+  <div class="demo-banner" role="note">
+    <strong>DEMO – data sintetis</strong>
+    <span>PT Kopi Senja adalah perusahaan fiktif. Semua data pribadi di sumber demo dibuat untuk demo dan bukan milik orang sungguhan.</span>
+  </div>
+  {% endif %}
+
+  <header class="topbar">
+    <a class="brand" href="/">PDP Guardian</a>
+    {% if chain and chain.checked %}
+      {% if chain.valid %}
+      <span class="chain chain--valid" title="Setiap hash dihitung ulang dari record pertama saat halaman ini dimuat">
+        <span class="chain__dot" aria-hidden="true"></span>
+        Rantai hash valid · {{ chain.checked }} record diverifikasi ulang
+      </span>
+      {% else %}
+      <a class="chain chain--invalid" href="/evidence/EV-{{ '%06d' % chain.first_invalid }}">
+        <span class="chain__dot" aria-hidden="true"></span>
+        Rantai hash TIDAK VALID mulai EV-{{ '%06d' % chain.first_invalid }}: {{ chain_reason(chain.reason) }}
+      </a>
+      {% endif %}
+    {% endif %}
+  </header>
+
+  <div class="disclaimer" role="note">
+    <strong>{{ DISCLAIMER }}</strong>
+    Status dihitung oleh kode deterministik dari sampel dan metadata; nilai asli tidak pernah disimpan.
+  </div>
+
+  <main class="page">
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="footer">
+    <p>{{ DISCLAIMER }} Rujukan pasal masih dari sumber sekunder dan belum diverifikasi terhadap teks resmi PP 33/2026.</p>
+    <p>PDP Guardian {{ VERSION }} · evidence store hanya-baca</p>
+  </footer>
+</body>
+</html>

@@ -13,6 +13,7 @@ from collections.abc import Iterator, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 
 import psycopg
@@ -27,6 +28,8 @@ from pdp_guardian.evidence.chain import (
     verify_chain,
 )
 from pdp_guardian.evidence.diff import DiffEntry, diff_scans
+
+DEFAULT_EVIDENCE_URL = "sqlite:///pdp_guardian.db"
 
 _COLUMNS = (
     "seq, scan_id, check_id, article, resource, locator, status, method,"
@@ -106,20 +109,33 @@ class AppendedScan:
 
 
 class EvidenceRepository:
-    """Evidence store at ``url``: ``sqlite:///path.db`` or ``postgresql://...``."""
+    """Evidence store at ``url``: ``sqlite:///path.db`` or ``postgresql://...``.
 
-    def __init__(self, url: str) -> None:
+    ``read_only`` (the dashboard) creates no schema and opens a read-only session.
+    A store that does not exist yet then reads as empty; see ``initialized()``.
+    """
+
+    def __init__(self, url: str, read_only: bool = False) -> None:
         if url.startswith("sqlite:///"):
             self._sqlite = True
-            # isolation_level=None: transactions are opened explicitly below.
-            self._conn: Any = sqlite3.connect(url.removeprefix("sqlite:///"), isolation_level=None)
+            path = url.removeprefix("sqlite:///")
+            if not read_only:
+                # isolation_level=None: transactions are opened explicitly below.
+                self._conn: Any = sqlite3.connect(path, isolation_level=None)
+            elif Path(path).exists():
+                self._conn = sqlite3.connect(f"{Path(path).resolve().as_uri()}?mode=ro", uri=True)
+            else:
+                # No scan has run yet (or demo/reset.sh removed the file): an empty store.
+                self._conn = sqlite3.connect(":memory:")
         elif url.startswith(("postgresql://", "postgres://")):
             self._sqlite = False
-            self._conn = psycopg.connect(url, autocommit=True)
+            options = "-c default_transaction_read_only=on" if read_only else None
+            self._conn = psycopg.connect(url, autocommit=True, options=options)
         else:
             raise ValueError("evidence URL must start with sqlite:/// or postgresql://")
-        for statement in _TABLES + (_SQLITE_GUARDS if self._sqlite else _POSTGRES_GUARDS):
-            self._execute(statement)
+        if not read_only:
+            for statement in _TABLES + (_SQLITE_GUARDS if self._sqlite else _POSTGRES_GUARDS):
+                self._execute(statement)
 
     def close(self) -> None:
         self._conn.close()
@@ -147,6 +163,14 @@ class EvidenceRepository:
                 self._insert_diff(entry)
         return AppendedScan(scan_id, records, diff)
 
+    def initialized(self) -> bool:
+        """Whether the evidence tables exist (always true unless opened ``read_only``)."""
+        if self._sqlite:
+            sql = "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'evidence'"
+        else:
+            sql = "SELECT 1 WHERE to_regclass('evidence') IS NOT NULL"
+        return self._execute(sql).fetchone() is not None
+
     def scan_ids(self) -> list[str]:
         """All scans, oldest first."""
         rows = self._execute(
@@ -167,6 +191,10 @@ class EvidenceRepository:
                 f"SELECT {_COLUMNS} FROM evidence WHERE scan_id = %s ORDER BY seq", (scan_id,)
             ).fetchall()
         return [_record(row) for row in rows]
+
+    def record(self, seq: int) -> EvidenceRecord | None:
+        row = self._execute(f"SELECT {_COLUMNS} FROM evidence WHERE seq = %s", (seq,)).fetchone()
+        return _record(row) if row else None
 
     def diff(self, scan_id: str) -> list[DiffEntry]:
         rows = self._execute(

@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}Belum ada scan{% endblock %}
+{% block content %}
+<section class="empty">
+  <h1>Belum ada scan</h1>
+  <p>Evidence store masih kosong. Jalankan scan pertama, lalu muat ulang halaman ini.</p>
+  <pre><code>pdp-guardian scan --declaration demo/declaration.yaml --connector sqlurl \
+  --source-name cloudsql://kopi-senja/app --location asia-southeast2</code></pre>
+</section>
+{% endblock %}

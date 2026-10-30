@@ -11,12 +11,16 @@ from pathlib import Path
 
 import psycopg
 import pytest
+from fastapi.testclient import TestClient
 from lokal import is_valid_nik
 
 from pdp_guardian.checks import ARTICLES, Status, aggregate, article_for
 from pdp_guardian.connectors.sqlurl import SqlUrlConnector
 from pdp_guardian.declaration import load_declaration
 from pdp_guardian.engine import run_checks
+from pdp_guardian.evidence import EvidenceRepository
+from pdp_guardian.web import create_app
+from pdp_guardian.web.summary import article_slug
 
 DEMO = Path(__file__).resolve().parent.parent / "demo"
 POSTGRES_URL = os.environ.get("PDP_TEST_POSTGRES_URL")
@@ -122,3 +126,38 @@ def test_migration_refuses_to_run_twice() -> None:
     migrate()
     with pytest.raises(psycopg.errors.RaiseException, match="reset.sh"):
         migrate()
+
+
+@needs_postgres
+def test_dashboard_shows_the_demo_without_raw_values(tmp_path: Path) -> None:
+    seed()
+    with psycopg.connect(POSTGRES_URL) as conn:
+        raw = [
+            value
+            for sql in (
+                "SELECT nik FROM customers",
+                "SELECT nama FROM customers",
+                "SELECT no_hp FROM customers",
+                "SELECT alamat FROM customers",
+                "SELECT nama FROM marketing_leads",
+                "SELECT no_hp FROM marketing_leads",
+                "SELECT email FROM marketing_leads",
+            )
+            for (value,) in conn.execute(sql)
+        ]
+    url = f"sqlite:///{tmp_path / 'evidence.db'}"
+    with EvidenceRepository(url) as store:
+        first = store.append_scan(scan())
+        migrate()
+        second = store.append_scan(scan())
+
+    app = TestClient(create_app(url, demo=True))
+    paths = ["/", f"/scans/{first.scan_id}"]
+    paths += [f"/scans/{second.scan_id}/pasal/{article_slug(a)}" for a in ARTICLES]
+    paths += [f"/evidence/{r.evidence_id}" for r in first.records + second.records]
+    pages = [app.get(path).text for path in paths]
+
+    assert "C1" in pages[0] and "Gagal cek → Lolos cek" in pages[0]
+    for html in pages:
+        for value in raw:
+            assert value not in html

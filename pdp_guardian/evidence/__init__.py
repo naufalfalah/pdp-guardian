@@ -8,9 +8,14 @@ from pdp_guardian.evidence.chain import (
     verify_chain,
 )
 from pdp_guardian.evidence.diff import DiffEntry, diff_scans
-from pdp_guardian.evidence.repository import AppendedScan, EvidenceRepository
+from pdp_guardian.evidence.repository import (
+    DEFAULT_EVIDENCE_URL,
+    AppendedScan,
+    EvidenceRepository,
+)
 
 __all__ = [
+    "DEFAULT_EVIDENCE_URL",
     "GENESIS_HASH",
     "AppendedScan",
     "ChainCheck",

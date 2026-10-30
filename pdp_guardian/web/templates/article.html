@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% from "_macros.html" import badge, change, where, unverified %}
+{% block title %}{{ item.article.label }}{% endblock %}
+{% block content %}
+<nav class="crumbs" aria-label="Navigasi">
+  <a href="/scans/{{ scan.scan_id }}">Scan {{ scan.scan_id }}</a> › {{ item.article.label }}
+</nav>
+
+<section class="article-head card--{{ status_class(item.status) }}">
+  <div>
+    <h1>{{ item.article.label }}</h1>
+    <p class="card__title">{{ item.article.title }}</p>
+    <p class="meta">{{ scan.scanned_at | wib }} · {{ unverified(item.article) }}</p>
+  </div>
+  {{ badge(item.status, large=true) }}
+</section>
+
+<ul class="checks checks--inline">
+  {% for c in item.checks %}
+  <li>
+    <span class="checks__id">{{ c.check_id }}</span>
+    <span class="checks__title">{{ c.title }}</span>
+    {{ badge(c.status) }}
+    <span class="muted">{% if c.records %}{{ c.records }} record{% else %}tidak ada sumber yang diperiksa{% endif %}</span>
+  </li>
+  {% endfor %}
+</ul>
+
+<section class="records">
+  {% for record in item.records %}
+  {% set story = narrate(record) %}
+  {% set entry = change_for(record, scan.diff) %}
+  <article class="record card--{{ status_class(record.status) }}">
+    <header class="record__head">
+      <div>
+        <a class="record__id" href="/evidence/{{ record.evidence_id }}">{{ record.evidence_id }}</a>
+        <span class="checks__id">{{ record.check_id }}</span> {{ story.title }}
+        <p class="record__where">{{ where(record.resource, record.locator) }}</p>
+      </div>
+      <div class="record__status">
+        {{ badge(record.status) }}
+        {% if entry %}{{ change(entry) }}{% endif %}
+      </div>
+    </header>
+    <p class="record__summary">{{ story.summary }}</p>
+    {% if story.remediation %}
+    <p class="record__remediation"><strong>Petunjuk perbaikan:</strong> {{ story.remediation }}</p>
+    {% endif %}
+    {% if record.masked_samples %}
+    <p class="samples"><span class="muted">Contoh (disamarkan):</span>
+      {% for s in record.masked_samples %}<code class="sample">{{ s }}</code>{% endfor %}
+    </p>
+    {% endif %}
+    <footer class="record__foot">
+      <span class="muted">hash</span> <code>{{ record.hash[:16] }}…</code>
+      <span class="muted">prev</span> <code>{{ record.prev_hash[:16] }}…</code>
+      <a href="/evidence/{{ record.evidence_id }}">Detail evidence →</a>
+    </footer>
+  </article>
+  {% endfor %}
+</section>
+{% endblock %}

@@ -12,6 +12,8 @@ from dataclasses import dataclass
 from pdp_guardian.checks import CHECK_TITLES, Status
 from pdp_guardian.evidence import EvidenceRecord
 
+DISCLAIMER = "Temuan untuk ditinjau DPO; bukan pernyataan kesesuaian."
+
 STATUS_LABELS: dict[Status, str] = {
     Status.PASS: "Lolos cek",
     Status.FAIL: "Gagal cek",

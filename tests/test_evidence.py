@@ -185,3 +185,29 @@ def test_tampering_in_the_database_is_detected(tmp_path: Path) -> None:
 def test_unknown_evidence_url() -> None:
     with pytest.raises(ValueError, match="evidence URL"):
         EvidenceRepository("mysql://localhost/evidence")
+
+
+def test_read_only_store_reads_and_refuses_writes(repository_url: str) -> None:
+    with EvidenceRepository(repository_url) as store:
+        appended = store.append_scan([c1(Status.FAIL), c5(Status.NEEDS_REVIEW)], AT)
+
+    with EvidenceRepository(repository_url, read_only=True) as store:
+        assert store.initialized()
+        assert store.records() == appended.records
+        assert store.record(2) == appended.records[1]
+        assert store.record(99) is None
+        with pytest.raises(Exception, match="(?i)read.?only"):
+            store.append_scan([c1(Status.PASS)], LATER)
+        assert len(store.records()) == 2
+
+
+def test_read_only_store_does_not_create_schema(repository_url: str) -> None:
+    with EvidenceRepository(repository_url, read_only=True) as store:
+        assert not store.initialized()
+
+
+def test_read_only_sqlite_store_does_not_create_the_file(tmp_path: Path) -> None:
+    path = tmp_path / "missing.db"
+    with EvidenceRepository(f"sqlite:///{path}", read_only=True) as store:
+        assert not store.initialized()
+    assert not path.exists()

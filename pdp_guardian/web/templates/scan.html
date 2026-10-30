@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% from "_macros.html" import badge, change, where, unverified %}
+{% block title %}Ringkasan per pasal{% endblock %}
+{% block content %}
+<section class="scan-head">
+  <div>
+    <h1>Ringkasan per pasal</h1>
+    <p class="meta">
+      Scan <code>{{ scan.scan_id }}</code> · {{ scan.scanned_at | wib }}
+      {% if is_latest %}<span class="tag">scan terbaru</span>{% else %}<a class="tag tag--warn" href="/">bukan scan terbaru · lihat terbaru →</a>{% endif %}
+    </p>
+    <p class="meta">
+      Scan ini menambah record
+      <a href="/evidence/EV-{{ '%06d' % scan.first_seq }}">EV-{{ '%06d' % scan.first_seq }}</a> …
+      <a href="/evidence/EV-{{ '%06d' % scan.last_seq }}">EV-{{ '%06d' % scan.last_seq }}</a>
+      ke rantai ({{ scan.last_seq - scan.first_seq + 1 }} record; total rantai {{ total }} record).
+    </p>
+  </div>
+</section>
+
+{% if scan.regressions %}
+<div class="alert alert--regression" role="alert">
+  <strong>{{ scan.regressions }} regresi</strong> sejak scan sebelumnya: cek yang sebelumnya Lolos cek kini Gagal cek.
+  <a href="#perubahan">Lihat perubahan ↓</a>
+</div>
+{% endif %}
+
+<section class="articles" aria-label="Status per pasal">
+  {% for item in scan.articles %}
+  <article class="card card--{{ status_class(item.status) }}">
+    <header class="card__head">
+      <div>
+        <h2 class="card__label">{{ item.article.label }}</h2>
+        <p class="card__title">{{ item.article.title }}</p>
+      </div>
+      {{ badge(item.status, large=true) }}
+    </header>
+    <ul class="checks">
+      {% for c in item.checks %}
+      <li>
+        <span class="checks__id">{{ c.check_id }}</span>
+        <span class="checks__title">{{ c.title }}</span>
+        {% if c.records %}
+          {{ badge(c.status) }} <span class="muted">{{ c.records }} record</span>
+        {% else %}
+          {{ badge(c.status) }} <span class="muted">tidak ada sumber yang diperiksa</span>
+        {% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+    {% if item.changes %}
+    <ul class="card__changes">
+      {% for e in item.changes %}<li>{{ e.check_id }} {{ where(e.resource, e.locator) }} {{ change(e) }}</li>{% endfor %}
+    </ul>
+    {% endif %}
+    <footer class="card__foot">
+      {{ unverified(item.article) }}
+      {% if item.records %}
+      <a class="card__link" href="/scans/{{ scan.scan_id }}/pasal/{{ item.slug }}">Lihat {{ item.records | length }} evidence →</a>
+      {% else %}
+      <span class="muted">Tidak ada record evidence di scan ini.</span>
+      {% endif %}
+    </footer>
+  </article>
+  {% endfor %}
+</section>
+
+<section id="perubahan" class="section">
+  <h2>Perubahan dari scan sebelumnya</h2>
+  {% if scan.diff %}
+  <table class="table">
+    <thead><tr><th>Cek</th><th>Sumber</th><th>Pasal</th><th>Perubahan</th></tr></thead>
+    <tbody>
+      {% for e in scan.diff %}
+      <tr{% if e.regression %} class="row--regression"{% endif %}>
+        <td>{{ e.check_id }}</td>
+        <td>{{ where(e.resource, e.locator) }}</td>
+        <td>{{ e.article }}</td>
+        <td>{{ change(e) }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% elif scan is sameas history[-1] %}
+  <p class="muted">Ini scan pertama di rantai, jadi belum ada pembanding.</p>
+  {% else %}
+  <p class="muted">Tidak ada status yang berubah.</p>
+  {% endif %}
+</section>
+
+<section class="section">
+  <h2>Riwayat scan</h2>
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Scan</th><th>Waktu</th><th>Record</th>
+        {% for item in scan.articles %}<th>{{ item.article.label }}</th>{% endfor %}
+        <th>Regresi</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for s in history %}
+      <tr{% if s.scan_id == scan.scan_id %} class="row--current" aria-current="true"{% endif %}>
+        <td><a href="/scans/{{ s.scan_id }}"><code>{{ s.scan_id }}</code></a></td>
+        <td>{{ s.scanned_at | wib }}</td>
+        <td>EV-{{ '%06d' % s.first_seq }} … EV-{{ '%06d' % s.last_seq }}</td>
+        {% for item in s.articles %}<td>{{ badge(item.status) }}</td>{% endfor %}
+        <td>{% if s.regressions %}<span class="change change--regression"><strong>{{ s.regressions }}</strong></span>{% else %}<span class="muted">0</span>{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

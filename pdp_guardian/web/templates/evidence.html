@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% from "_macros.html" import badge, change, where, unverified %}
+{% block title %}{{ record.evidence_id }}{% endblock %}
+{% block content %}
+{% set story = narrate(record) %}
+<nav class="crumbs" aria-label="Navigasi">
+  <a href="/scans/{{ record.scan_id }}">Scan {{ record.scan_id }}</a> ›
+  <a href="/scans/{{ record.scan_id }}/pasal/{{ item.slug }}">{{ record.article }}</a> ›
+  {{ record.evidence_id }}
+</nav>
+
+<section class="article-head card--{{ status_class(record.status) }}">
+  <div>
+    <h1>{{ record.evidence_id }}</h1>
+    <p class="card__title"><span class="checks__id">{{ record.check_id }}</span> {{ story.title }} · {{ record.article }}</p>
+    <p class="meta">{{ where(record.resource, record.locator) }} · {{ unverified(item.article) }}</p>
+  </div>
+  <div class="record__status">
+    {{ badge(record.status, large=true) }}
+    {% if entry %}{{ change(entry) }}{% endif %}
+  </div>
+</section>
+
+<section class="section">
+  <h2>Penjelasan</h2>
+  <p>{{ story.summary }}</p>
+  {% if story.remediation %}
+  <p class="record__remediation"><strong>Petunjuk perbaikan:</strong> {{ story.remediation }}</p>
+  {% endif %}
+</section>
+
+<section class="section">
+  <h2>Isi record</h2>
+  <p class="muted">Nilai di bawah ditampilkan persis seperti yang di-hash. Record hanya memuat hitungan, metadata, dan maksimal 3 sampel yang sudah disamarkan.</p>
+  <dl class="fields">
+    <dt>Metode</dt><dd><code class="wrap">{{ record.method }}</code></dd>
+    <dt>Scan</dt><dd><a href="/scans/{{ record.scan_id }}"><code>{{ record.scan_id }}</code></a></dd>
+    <dt>Waktu scan</dt><dd>{{ record.scanned_at | wib }} <span class="muted">(<code>{{ record.payload().scanned_at }}</code>)</span></dd>
+    <dt>Sumber</dt><dd><code class="wrap">{{ record.resource }}</code></dd>
+    <dt>Lokator</dt><dd><code>{{ record.locator }}</code></dd>
+    <dt>Status</dt><dd><code>{{ record.status.value }}</code></dd>
+    <dt>Contoh (disamarkan)</dt>
+    <dd>
+      {% for s in record.masked_samples %}<code class="sample">{{ s }}</code>{% else %}<span class="muted">tidak ada</span>{% endfor %}
+    </dd>
+  </dl>
+
+  <div class="two-col">
+    <div>
+      <h3>Hitungan (<code>counts</code>)</h3>
+      <table class="table table--compact">
+        <tbody>
+          {% for key, value in record.counts | dictsort %}
+          <tr><th>{{ count_label(key) }} <code class="muted">{{ key }}</code></th><td class="num">{{ value }}</td></tr>
+          {% else %}
+          <tr><td class="muted">tidak ada</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div>
+      <h3>Rincian (<code>details</code>)</h3>
+      <table class="table table--compact">
+        <tbody>
+          {% for key, value in record.details | dictsort %}
+          <tr><th>{{ detail_label(key) }} <code class="muted">{{ key }}</code></th><td><code class="wrap">{{ value }}</code></td></tr>
+          {% else %}
+          <tr><td class="muted">tidak ada</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <h2>Rantai hash</h2>
+  <p class="muted"><code>hash = sha256(prev_hash + canonical_json(record tanpa hash))</code>, dihitung ulang saat halaman ini dimuat.</p>
+  <ul class="verify">
+    <li class="verify__{{ 'ok' if own.hash_matches else 'bad' }}">
+      {{ "✓ Hash record ini cocok dengan isinya." if own.hash_matches else "✗ Hash record ini TIDAK cocok dengan isinya." }}
+    </li>
+    <li class="verify__{{ 'ok' if own.links_to_previous else 'bad' }}">
+      {% if own.links_to_previous %}✓ prev_hash tersambung ke {{ previous.evidence_id if previous else "awal rantai (genesis)" }}.
+      {% else %}✗ prev_hash TIDAK tersambung ke {{ previous.evidence_id if previous else "awal rantai (genesis)" }}.{% endif %}
+    </li>
+  </ul>
+  <dl class="fields">
+    <dt>seq</dt><dd><code>{{ record.seq }}</code></dd>
+    <dt>prev_hash</dt>
+    <dd>
+      <code class="hash">{{ record.prev_hash }}</code>
+      {% if previous %}<a href="/evidence/{{ previous.evidence_id }}">← {{ previous.evidence_id }}</a>{% else %}<span class="muted">genesis</span>{% endif %}
+    </dd>
+    <dt>hash</dt>
+    <dd>
+      <code class="hash">{{ record.hash }}</code>
+      {% if following %}<a href="/evidence/{{ following.evidence_id }}">{{ following.evidence_id }} →</a>{% else %}<span class="muted">ujung rantai</span>{% endif %}
+    </dd>
+  </dl>
+</section>
+{% endblock %}

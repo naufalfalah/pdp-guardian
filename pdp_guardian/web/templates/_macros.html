@@ -1,0 +1,22 @@
+{% macro badge(status, large=false) -%}
+<span class="badge badge--{{ status_class(status) }}{% if large %} badge--large{% endif %}">{{ STATUS_LABELS[status] }}</span>
+{%- endmacro %}
+
+{% macro status_or_dash(status) -%}
+{% if status %}{{ badge(status) }}{% else %}<span class="muted">tidak dicek</span>{% endif %}
+{%- endmacro %}
+
+{% macro change(entry) -%}
+<span class="change{% if entry.regression %} change--regression{% endif %}">
+  {% if entry.regression %}<strong>Regresi</strong> · {% endif %}
+  {{ STATUS_LABELS[entry.before] if entry.before else "tidak dicek" }} → {{ STATUS_LABELS[entry.after] if entry.after else "tidak dicek" }}
+</span>
+{%- endmacro %}
+
+{% macro where(resource, locator) -%}
+<code class="resource">{{ resource }}</code>{% if locator != "*" %} <span class="locator">[{{ locator }}]</span>{% endif %}
+{%- endmacro %}
+
+{% macro unverified(article) -%}
+{% if not article.verified %}<span class="tag tag--warn" title="Rujukan dari sumber sekunder; cocokkan dengan teks resmi sebelum dipakai">rujukan pasal belum diverifikasi</span>{% endif %}
+{%- endmacro %}
